@@ -1,0 +1,112 @@
+# -*- coding: utf-8 -*-
+
+import sublime
+import sublime_plugin
+import pyte
+from sublimerepl import repl_view, ReplReader, Queue
+
+KEYMAP = {"enter": "\n", 
+          "tab": "\t", 
+          "f10": "\x1b[21~", 
+          "f8": "\e[[19~", 
+          "escape": "\x1b\x1b", 
+          "down": "\x1b[B",
+          "up": "\x1b[A",
+          "left": "\x1b[C",
+          "right": "\x1b[D",
+          "backspace": "\b"}
+
+
+        
+class SublimeptyNewFile(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.new_file()
+        view.settings().set("sublimepty", True)
+
+
+class PtyView(object):
+
+    def __init__(self, view):
+
+        self._view = view
+        self._view.settings().set("sublimepty", True)
+        self._stream = pyte.Stream()
+        self._screen = pyte.Screen(80, 24)
+
+
+
+KEYS = ["up", "down", "right", "left", "insert", "home", "end", "pageup", 
+        "pagedown", "backspace", "delete", "tab", "enter", "pause", "escape", 
+        "space", "keypad0", "keypad1", "keypad2", "keypad3", "keypad4", 
+        "keypad5", "keypad6", "keypad7", "keypad8", "keypad9", "keypad_period",
+        "keypad_divide", "keypad_multiply", "keypad_minus", "keypad_plus", 
+        "keypad_enter", "clear", "f1", "f2", "f3", "f4", "f5", "f6", "f7", 
+        "f8", "f9", "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17", 
+        "f18", "f19", "f20", "sysreq", "break", "context_menu", "browser_back", 
+        "browser_forward", "browser_refresh", "browser_stop", "browser_search", 
+        "browser_favorites", "browser_home"] + [chr(i) for i in range(32, 127)] 
+
+
+def escape(string):
+    return string.replace('\\', '\\\\').replace('"', '\\"')
+
+def keymap_str(key, **kwds):
+    template = '{"keys": ["%(keys)s"], "command": "sublimepty_keypress", "args": {"key": "%(key)s", "alt": %(alt)s, "ctrl": %(ctrl)s, "shift": %(shift)s, "super": %(super)s}, "context": [{"key": "setting.sublimepty"}]}'
+    parts = []
+    for k, v in kwds.items():
+        if v:
+            parts.append(k)
+    parts.append(escape(key))
+    d = {}
+    d["keys"] = "+".join(parts)
+    d["key"] = escape(key)
+    for key in ("alt", "ctrl", "shift", "super"):
+        d[key] = "true" if kwds[key] else "false"
+    return template % d
+
+def generate_keymap(filename):
+    with open(filename, "w") as f:
+        f.write("[\n")
+        first = True
+        for key in KEYS:
+            for super_ in (False, True):
+                for shift in (False, True):
+                    for ctrl in (False, True):
+                        for alt in (False, True):
+                            if not first:
+                                f.write(",\n")
+                            else:
+                                first = False
+                            f.write(keymap_str(key, alt=alt, ctrl=ctrl, shift=shift, super=super_))     
+                    
+        f.write("]")
+
+#generate_keymap(r"Default.sublime-keymap")
+
+def gen_theme():
+
+    fg_colors = {'black': '#000000',
+             'white': '#FFFFFF',
+             'darkred': '#AA0000',
+             'red': '#FF0000',
+             'green': '#00FF00',
+             'darkgreen': '#00AA00',
+             'darkcyan': '#00AAAA',
+             'cyan': '#00FFFF',
+             'darkgrey': '#333333',
+             'lightgrey': '#999999',
+             'darkblue': '#0000AA',
+             'blue': '#0000FF',
+             'darkmagenta': '#AA00AA',
+             'magenta': '#FF00FF',
+             'brown': '#F4A460',
+             'yellow': '#FFFF00',
+             'default': '#FFFFFF'}
+    bg_colors = fg_colors.copy()
+    bg_colors['default'] ='#000001'
+
+    for c1,h1 in fg_colors.items():
+        for c2,h2 in bg_colors.items():
+            s = "- scope: {c1}.{c2}\n  settings: {{background: '{h2}', foreground: '{h1}'}}".format(c1=c1, h1=h1, c2=c2, h2=h2)
+            print s
+
