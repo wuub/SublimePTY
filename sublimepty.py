@@ -7,7 +7,7 @@ SUPERVISOR = Supervisor()
 
 def read_all():
     SUPERVISOR.read_all()
-    sublime.set_timeout(read_all, 100)
+    sublime.set_timeout(read_all, 20)
 
 read_all()
 

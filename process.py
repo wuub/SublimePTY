@@ -111,8 +111,8 @@ class PtyProcess(Process):
         self._poll = select.poll()
 
         self._stream = pyte.ByteStream()
-        self._screens = [pyte.Screen(self.DEFAULT_COLUMNS, self.DEFAULT_LINES)]
-        for screen in self._screens:
+        self._screens = {'diff': pyte.DiffScreen(self.DEFAULT_COLUMNS, self.DEFAULT_LINES)}
+        for screen in self._screens.values():
             self._stream.attach(screen)
 
 
@@ -128,10 +128,13 @@ class PtyProcess(Process):
         self._poll.register(self._master, select.POLLIN)
 
     def refresh_views(self):
-        lines = self._screens[0].display
-        cursor = self._screens[0].cursor
+        sc = self._screens['diff']
+        dis = sc.display
+        lines_dict = dict((lineno, dis[lineno]) for lineno in sc.dirty)
+        sc.dirty.clear()
+        cursor = self._screens['diff'].cursor
         for v in self._views:
-            v.full_refresh(lines, cursor)
+            v.diff_refresh(lines_dict, cursor)
 
     def _read(self):
         import os
@@ -193,10 +196,13 @@ class SublimeView(object):
             self._process.detach_view(self)
         self._process = new_process
         if new_process:
-            new_id = new_process.id
+            self._view.settings().set("sublimepty_id", new_process.id)
+            self._fill_stars(new_process._columns, new_process._lines)
         else:
-            new_id = None
-        self._view.settings().set("sublimepty_id", new_id)
+            self._view.settings().set("sublimepty_id", None)
+            
+    def _fill_stars(self, columns, lines):
+        self.full_refresh(["*"*columns]*lines)
 
     def _new_view(self):
         import sublime
@@ -210,8 +216,15 @@ class SublimeView(object):
         (w, h) = self._view.viewport_extent()
         return h // self._view.line_height()
 
+    def _set_cursor(self, cursor):
+        import sublime
+        if not cursor:
+            return 
+        self._view.sel().clear()
+        tp = self._view.text_point(cursor.y, cursor.x)
+        self._view.sel().add(sublime.Region(tp, tp))
         
-    def full_refresh(self, lines, cursor):
+    def full_refresh(self, lines, cursor=None):
         import sublime
         v = self._view
         ed = v.begin_edit()
@@ -221,7 +234,16 @@ class SublimeView(object):
             l = lines[idx]
             p = v.text_point(idx, 0)
             v.insert(ed, p, l + "\n")
-        self._view.sel().clear()
-        tp = self._view.text_point(cursor.y, cursor.x)
-        self._view.sel().add(sublime.Region(tp, tp))
+        self._set_cursor(cursor)
+        v.end_edit(ed)
+
+    def diff_refresh(self, lines_dict, cursor=None):
+        import sublime
+        v = self._view
+        ed = v.begin_edit()
+        for lineno, text in lines_dict.items():
+            p = v.text_point(lineno, 0)
+            line_region = v.line(p)
+            v.replace(ed, line_region, text)
+        self._set_cursor(cursor)
         v.end_edit(ed)
