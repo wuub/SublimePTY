@@ -15,7 +15,15 @@ class Supervisor(object):
         self.processes[process.id] = process
 
     def process(self, process_id):
-        return self.processes[process_id]
+        if process_id in self.processes:
+            return self.processes[process_id]
+        return None
+
+    def read_all(self):
+        for process in self.processes.values():
+            process._read()
+
+
 
 
 class Process(object):
@@ -80,8 +88,14 @@ class Process(object):
 
 class PtyProcess(Process):
     DEFAULT_LOCALE = 'en_US.UTF8'
+    KEYMAP = {"enter": "\n", "tab": "\t", "f10": "\x1b[21~", 
+              "space": " ",
+              "f8": "\e[[19~", "escape": "\x1b\x1b", "down": "\x1b[B",
+              "up": "\x1b[A", "right": "\x1b[C", "left": "\x1b[D",
+              "backspace": "\b"}
 
     def __init__(self, supervisor, cmd=None, env=None, cwd=None):
+        import select
         super(PtyProcess, self).__init__(supervisor)
         self._cmd = cmd or ["bash"]
         self._env = env or {"TERM": "linux", 
@@ -94,6 +108,7 @@ class PtyProcess(Process):
         self._process = None
         self._master = None
         self._slave = None
+        self._poll = select.poll()
 
         self._stream = pyte.ByteStream()
         self._screens = [pyte.Screen(self.DEFAULT_COLUMNS, self.DEFAULT_LINES)]
@@ -105,19 +120,36 @@ class PtyProcess(Process):
         self._start()
 
     def _start(self):
-         (self._master, self._slave) = pty.openpty()
-         self._process = subprocess.Popen(self._cmd, stdin=self._slave, 
-                                          stdout=self._slave, stderr=subprocess.STDOUT, 
-                                          env=self._env, close_fds=True)
+        import select
+        (self._master, self._slave) = pty.openpty()
+        self._process = subprocess.Popen(self._cmd, stdin=self._slave, 
+                                         stdout=self._slave, stderr=subprocess.STDOUT, 
+                                         env=self._env, close_fds=True)
+        self._poll.register(self._master, select.POLLIN)
+
+    def refresh_views(self):
+        lines = self._screens[0].display
+        cursor = self._screens[0].cursor
+        for v in self._views:
+            v.full_refresh(lines, cursor)
 
     def _read(self):
-        data = self._master.read()
-        if data:
+        import os
+        read = 0
+        while True:
+            if not self._poll.poll(0):
+                break # no input
+            data = os.read(self._master, 100)
+            read += len(data)
             self._stream.feed(data)
+        if read:
             self.refresh_views()
+        return read
 
     def send_bytes(self, bytes):
         import os
+        if bytes in self.KEYMAP:
+            bytes = self.KEYMAP[bytes]
         os.write(self._master, bytes)
 
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
@@ -133,6 +165,7 @@ class PtyProcess(Process):
 
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
         self.send_bytes(key)
+        self._read()
 
 
 class SublimeView(object):
@@ -146,7 +179,7 @@ class SublimeView(object):
         v.settings().set("caret_style", "blink")
         v.settings().set("auto_complete", False)
         v.settings().set("draw_white_space", "none")
-        v.settings().set("color_scheme", "Packages/SublimePTY/SublimePTY.tmTheme")
+        #v.settings().set("color_scheme", "Packages/SublimePTY/SublimePTY.tmTheme")
         v.set_scratch(True)
         v.set_name("TERMINAL")
 
@@ -176,3 +209,19 @@ class SublimeView(object):
     def available_lines(self):
         (w, h) = self._view.viewport_extent()
         return h // self._view.line_height()
+
+        
+    def full_refresh(self, lines, cursor):
+        import sublime
+        v = self._view
+        ed = v.begin_edit()
+        whole = sublime.Region(0, v.size())
+        v.erase(ed, whole)
+        for idx in range(len(lines)):
+            l = lines[idx]
+            p = v.text_point(idx, 0)
+            v.insert(ed, p, l + "\n")
+        self._view.sel().clear()
+        tp = self._view.text_point(cursor.y, cursor.x)
+        self._view.sel().add(sublime.Region(tp, tp))
+        v.end_edit(ed)

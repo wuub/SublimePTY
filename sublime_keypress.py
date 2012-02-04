@@ -8,5 +8,4 @@ class SublimeptyKeypress(sublime_plugin.TextCommand):
         process = sublimepty.process(process_id)
         if not process:
             return
-        print (process_id)
         process.send_keypress(key, ctrl, alt, shift, super)

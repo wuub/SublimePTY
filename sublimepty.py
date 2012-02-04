@@ -5,6 +5,12 @@ from process import Supervisor, SublimeView, PtyProcess
 
 SUPERVISOR = Supervisor()
 
+def read_all():
+    SUPERVISOR.read_all()
+    sublime.set_timeout(read_all, 100)
+
+read_all()
+
 def process(id):
     return SUPERVISOR.process(id)
 
