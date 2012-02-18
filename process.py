@@ -95,7 +95,6 @@ class PtyProcess(Process):
               "backspace": "\b"}
 
     def __init__(self, supervisor, cmd=None, env=None, cwd=None):
-        import select
         import os
         super(PtyProcess, self).__init__(supervisor)
         self._cmd = cmd or [os.environ.get("SHELL")]
@@ -114,8 +113,7 @@ class PtyProcess(Process):
         self._process = None
         self._master = None
         self._slave = None
-        self._poll = select.poll()
-
+        
         self._stream = pyte.ByteStream()
         self._screens = {'diff': pyte.DiffScreen(self.DEFAULT_COLUMNS, self.DEFAULT_LINES)}
         for screen in self._screens.values():
@@ -131,8 +129,7 @@ class PtyProcess(Process):
         self._process = subprocess.Popen(self._cmd, stdin=self._slave, 
                                          stdout=self._slave, stderr=subprocess.STDOUT, 
                                          env=self._env, close_fds=True)
-        self._poll.register(self._master, select.POLLIN)
-
+        
     def refresh_views(self):
         sc = self._screens['diff']
         dis = sc.display
@@ -144,11 +141,13 @@ class PtyProcess(Process):
 
     def _read(self):
         import os
+        import select
         read = 0
         while True:
-            if not self._poll.poll(0):
+            (r,w,x) = select.select([self._master], [], [], 0)
+            if not r:
                 break # no input
-            data = os.read(self._master, 100)
+            data = os.read(self._master, 1)
             read += len(data)
             self._stream.feed(data)
         if read:
