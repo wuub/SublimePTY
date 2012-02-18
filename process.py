@@ -96,10 +96,16 @@ class PtyProcess(Process):
 
     def __init__(self, supervisor, cmd=None, env=None, cwd=None):
         import select
+        import os
         super(PtyProcess, self).__init__(supervisor)
-        self._cmd = cmd or ["bash"]
+        self._cmd = cmd or [os.environ["SHELL"]]
+        # copy of whole env causes some problems
         self._env = env or {"TERM": "linux", 
-                            "HOME": "/home/wuub", 
+                            'LOGNAME': os.environ["LOGNAME"],
+                            'USER': os.environ["USER"],
+                            "SHELL": os.environ["SHELL"],
+                            "USERNAME": os.environ["USERNAME"],
+                            "HOME": os.environ["HOME"], 
                             'COLUMNS': str(self.DEFAULT_COLUMNS), 
                             'LINES': str(self.DEFAULT_LINES), 
                             'LC_ALL': self.DEFAULT_LOCALE}
