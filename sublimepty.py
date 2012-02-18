@@ -14,7 +14,7 @@ read_all()
 def process(id):
     return SUPERVISOR.process(id)
 
-class OpenTerminal(sublime_plugin.WindowCommand):
+class OpenPty(sublime_plugin.WindowCommand):
     def run(self):
         sv = SublimeView()
         proc = PtyProcess(SUPERVISOR)
