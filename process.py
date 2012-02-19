@@ -5,6 +5,12 @@ import pty
 import subprocess
 from weakref import WeakValueDictionary
 import pyte
+import keymap
+import tty
+import os
+import functools
+
+
 
 
 class Supervisor(object):
@@ -22,8 +28,6 @@ class Supervisor(object):
     def read_all(self):
         for process in self.processes.values():
             process._read()
-
-
 
 
 class Process(object):
@@ -87,27 +91,15 @@ class Process(object):
 
 
 class PtyProcess(Process):
+    
     DEFAULT_LOCALE = 'en_US.UTF8'
-    KEYMAP = {"enter": "\n", "tab": "\t", "f10": "\x1b[21~", 
-              "space": " ",
-              "f8": "\e[[19~", "escape": "\x1b\x1b", "down": "\x1b[B",
-              "up": "\x1b[A", "right": "\x1b[C", "left": "\x1b[D",
-              "backspace": "\b"}
+    KEYMAP = keymap.ANSI
 
     def __init__(self, supervisor, cmd=None, env=None, cwd=None):
-        import os
         super(PtyProcess, self).__init__(supervisor)
         self._cmd = cmd or [os.environ.get("SHELL")]
-        # copy of whole env causes some problems
-        self._env = env or {"TERM": "linux", 
-                            'LOGNAME': os.environ.get("LOGNAME", ""),
-                            'USER': os.environ.get("USER", ""),
-                            "SHELL": os.environ.get("SHELL", ""),
-                            "USERNAME": os.environ.get("USERNAME", ""),
-                            "HOME": os.environ.get("HOME", ""), 
-                            'COLUMNS': str(self.DEFAULT_COLUMNS), 
-                            'LINES': str(self.DEFAULT_LINES), 
-                            'LC_ALL': self.DEFAULT_LOCALE}
+        self._env = env or os.environ
+        self._env["TERM"] = "linux"
 
         self._cwd = cwd or "."
         self._process = None
@@ -124,11 +116,13 @@ class PtyProcess(Process):
         self._start()
 
     def _start(self):
-        import select
+        def preexec():
+            os.setsid()
         (self._master, self._slave) = pty.openpty()
+        #ttyname = os.ttyname(self._slave)
         self._process = subprocess.Popen(self._cmd, stdin=self._slave, 
-                                         stdout=self._slave, stderr=subprocess.STDOUT, 
-                                         env=self._env, close_fds=True)
+                                         stdout=self._slave, stderr=self._slave, shell=False, 
+                                         env=self._env, close_fds=True, preexec_fn=preexec)
         
     def refresh_views(self):
         sc = self._screens['diff']
@@ -140,28 +134,21 @@ class PtyProcess(Process):
             v.diff_refresh(lines_dict, cursor)
 
     def _read(self):
-        import os
         import select
         read = 0
         while True:
             (r,w,x) = select.select([self._master], [], [], 0)
             if not r:
                 break # no input
-            data = os.read(self._master, 1)
+            data = os.read(self._master, 1024)
             read += len(data)
             self._stream.feed(data)
-        if read:
             self.refresh_views()
         return read
 
     def send_bytes(self, bytes):
         import os
-        if bytes in self.KEYMAP:
-            bytes = self.KEYMAP[bytes]
         os.write(self._master, bytes)
-
-    def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
-        self.send_bytes(key)
 
     def stop(self):
         self._process.kill()
@@ -171,8 +158,36 @@ class PtyProcess(Process):
     def is_running(self):
         return self._process is not None
 
+    def send_ctrl(self, key):
+        char = key.lower()
+        a = ord(char)
+        if a>=97 and a<=122:
+            a = a - ord('a') + 1
+            return self.send_bytes(chr(a))
+        d = {'@':0, '`':0, '[':27, '{':27, '\\':28, '|':28, ']':29, '}': 29,
+            '^':30, '~':30,'_':31, '?':127}
+        if char not in d:
+            return
+        return self.send_bytes(chr(d[char]))
+
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
-        self.send_bytes(key)
+        if ctrl and len(key)==1:
+            self.send_ctrl(key)
+            self._read()
+            return 
+        bytes = key
+        if key in self.KEYMAP:
+            d = self.KEYMAP[key]
+            flags = 0
+            flags |= keymap.CTRL * ctrl
+            if isinstance(d, dict):
+                if flags in d:
+                    bytes = d[flags]
+                else:
+                    bytes = key
+            else:
+                bytes = d
+        self.send_bytes(bytes)
         self._read()
 
 
