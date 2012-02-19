@@ -8,10 +8,6 @@ import pyte
 import keymap
 import tty
 import os
-import functools
-
-
-
 
 class Supervisor(object):
     def __init__(self):
@@ -100,7 +96,7 @@ class PtyProcess(Process):
         self._cmd = cmd or [os.environ.get("SHELL")]
         self._env = env or os.environ
         self._env["TERM"] = "linux"
-
+        
         self._cwd = cwd or "."
         self._process = None
         self._master = None
@@ -144,11 +140,11 @@ class PtyProcess(Process):
             data = os.read(self._master, 1024)
             read += len(data)
             self._stream.feed(data)
+        if read:
             self.refresh_views()
         return read
 
     def send_bytes(self, bytes):
-        import os
         if self.is_running():
             os.write(self._master, bytes)
 
