@@ -116,13 +116,11 @@ class PtyProcess(Process):
         self._start()
 
     def _start(self):
-        def preexec():
-            os.setsid()
         (self._master, self._slave) = pty.openpty()
         #ttyname = os.ttyname(self._slave)
         self._process = subprocess.Popen(self._cmd, stdin=self._slave, 
                                          stdout=self._slave, stderr=self._slave, shell=False, 
-                                         env=self._env, close_fds=True, preexec_fn=preexec)
+                                         env=self._env, close_fds=True, preexec_fn=os.setsid)
         
     def refresh_views(self):
         sc = self._screens['diff']
@@ -135,11 +133,14 @@ class PtyProcess(Process):
 
     def _read(self):
         import select
+        
         read = 0
         while True:
             (r,w,x) = select.select([self._master], [], [], 0)
             if not r:
                 break # no input
+            if not self.is_running(): 
+                return # dont lock on exit!
             data = os.read(self._master, 1024)
             read += len(data)
             self._stream.feed(data)
@@ -148,7 +149,8 @@ class PtyProcess(Process):
 
     def send_bytes(self, bytes):
         import os
-        os.write(self._master, bytes)
+        if self.is_running():
+            os.write(self._master, bytes)
 
     def stop(self):
         self._process.kill()
@@ -156,7 +158,7 @@ class PtyProcess(Process):
         return 
 
     def is_running(self):
-        return self._process is not None
+        return self._process is not None and self._process.poll() is None
 
     def send_ctrl(self, key):
         char = key.lower()
