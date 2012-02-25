@@ -145,8 +145,8 @@ class Stream(object):
             pass
         except KeyError:
             if __debug__:
-                self.flags["state"] = self.state
-                self.flags["unhandled"] = char
+                self.flags[b"state"] = self.state
+                self.flags[b"unhandled"] = char
                 self.dispatch("debug", *self.params)
                 self.reset()
             else:
@@ -246,7 +246,7 @@ class Stream(object):
             self.state = "arguments"
         elif char in "()":
             self.state = "charset"
-            self.flags["mode"] = char
+            self.flags[b"mode"] = char
         else:
             self.dispatch(self.escape[char])
 
@@ -275,7 +275,7 @@ class Stream(object):
                For details on the characters valid for use as arguments.
         """
         if char == "?":
-            self.flags["private"] = True
+            self.flags[b"private"] = True
         elif char in [ctrl.BEL, ctrl.BS, ctrl.HT, ctrl.LF, ctrl.VT,
                       ctrl.FF, ctrl.CR]:
             # Not sure why, but those seem to be allowed between CSI

@@ -812,9 +812,9 @@ class Screen(list):
 
         for attr in attrs or [0]:
             if attr in g.FG:
-                replace["fg"] = g.FG[attr]
+                replace[b"fg"] = g.FG[attr]
             elif attr in g.BG:
-                replace["bg"] = g.BG[attr]
+                replace[b"bg"] = g.BG[attr]
             elif attr in g.TEXT:
                 attr = g.TEXT[attr]
                 replace[attr[1:]] = attr.startswith("+")
