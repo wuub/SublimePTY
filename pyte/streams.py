@@ -210,8 +210,12 @@ class Stream(object):
 
             if hasattr(listener, "__before__"):
                 listener.__before__(event)
-
-            handler(*args, **self.flags)
+            try:
+                handler(*args, **self.flags)
+            except Exception, e:
+                # wuub: unicode keys in dict caused problems on OSX 
+                # when used as **kwds, all of them should be fixed now
+                print("HandlerException", repr(e), handler, args, self.flags)
 
             if hasattr(listener, "__after__"):
                 listener.__after__(event)
