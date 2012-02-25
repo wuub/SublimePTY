@@ -96,13 +96,14 @@ class PtyProcess(Process):
         self._cmd = cmd or [os.environ.get("SHELL")]
         self._env = env or os.environ
         self._env["TERM"] = "linux"
-        
+
         self._cwd = cwd or "."
         self._process = None
         self._master = None
         self._slave = None
         
         self._stream = pyte.ByteStream()
+        self._dbg_steram = None #pyte.DebugStream()
         self._screens = {'diff': pyte.DiffScreen(self.DEFAULT_COLUMNS, self.DEFAULT_LINES)}
         for screen in self._screens.values():
             self._stream.attach(screen)
@@ -140,6 +141,8 @@ class PtyProcess(Process):
             data = os.read(self._master, 1024)
             read += len(data)
             self._stream.feed(data)
+            if self._dbg_steram:
+                self._dbg_steram.feed(data)
         if read:
             self.refresh_views()
         return read
