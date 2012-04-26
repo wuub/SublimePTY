@@ -18,3 +18,12 @@ ANSI = {
     "backspace": "\b",
     "c": {CTRL: chr(3)}
 }
+
+
+WIN32 = {
+    "enter": "\r",
+    "tab": "\t",
+    "backspace": "\b",
+    "up": chr(38),
+    "down": chr(40)
+}

@@ -1,13 +1,18 @@
 #!coding: utf-8
 from __future__ import division
 
-import pty
+
 import subprocess
 from weakref import WeakValueDictionary
 import pyte
 import keymap
-import tty
 import os
+
+try:
+    import tty
+    import pty
+except ImportError:
+    pass
 
 class Supervisor(object):
     def __init__(self):
@@ -23,7 +28,7 @@ class Supervisor(object):
 
     def read_all(self):
         for process in self.processes.values():
-            process._read()
+            process.read()
 
 
 class Process(object):
@@ -84,6 +89,9 @@ class Process(object):
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
         raise NotImplemented
 
+    def read(self):
+        raise NotImplemented
+
 
 
 class PtyProcess(Process):
@@ -127,6 +135,9 @@ class PtyProcess(Process):
         cursor = self._screens['diff'].cursor
         for v in self._views:
             v.diff_refresh(lines_dict, cursor)
+
+    def read(self):
+        self._read()
 
     def _read(self):
         import select
@@ -190,6 +201,34 @@ class PtyProcess(Process):
                 bytes = d
         self.send_bytes(bytes)
         self._read()
+
+
+class Win32Process(Process):
+    KEYMAP = keymap.WIN32
+
+    def start(self):
+        import socket
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._sock.connect(("127.0.0.1", 5554))
+
+    def stop(self):
+        self._sock.close()
+
+    def is_running(self):
+        return True 
+
+    def send_bytes(self, bytes):
+        self._sock.send(bytes)
+
+    def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
+        if ctrl and key == 'c':
+            bytes = chr(3)
+        else:
+            bytes = self.KEYMAP.get(key) or key
+        self._sock.send(bytes)
+
+    def read(self):
+        pass
 
 
 class SublimeView(object):
