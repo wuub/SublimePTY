@@ -1,18 +1,23 @@
 #!coding: utf-8
 from __future__ import division
-
+from __future__ import absolute_import
 
 import subprocess
 from weakref import WeakValueDictionary
 import pyte
 import keymap
 import os
+import sys
+
+
 
 try:
     import tty
     import pty
 except ImportError:
     pass
+
+sys.path.append(os.getcwdu())
 
 class Supervisor(object):
     def __init__(self):
@@ -207,28 +212,29 @@ class Win32Process(Process):
     KEYMAP = keymap.WIN32
 
     def start(self):
-        import socket
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.connect(("127.0.0.1", 5554))
+        from console.console_client import ConsoleClient
+        self._cc = ConsoleClient("localhost", 8828)
+        self._lines = {}
 
     def stop(self):
-        self._sock.close()
+        pass
 
     def is_running(self):
         return True 
 
     def send_bytes(self, bytes):
-        self._sock.send(bytes)
+        self._cc.write_console_input(bytes)
 
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
-        if ctrl and key == 'c':
-            bytes = chr(3)
-        else:
-            bytes = self.KEYMAP.get(key) or key
-        self._sock.send(bytes)
+        self._cc.send_keypress(key, ctrl=ctrl, alt=alt, shift=shift, super=super)
+        self.read()
 
     def read(self):
-        pass
+        lines = {}
+        for k,v in self._cc.read().items():
+            lines[int(k)] = v
+        for v in self._views:
+            v.diff_refresh(lines)
 
 
 class SublimeView(object):
@@ -242,6 +248,8 @@ class SublimeView(object):
         v.settings().set("caret_style", "blink")
         v.settings().set("auto_complete", False)
         v.settings().set("draw_white_space", "none")
+        v.settings().set("word_wrap", False)
+        v.settings().set("gutter", False)
         #v.settings().set("color_scheme", "Packages/SublimePTY/SublimePTY.tmTheme")
         v.set_scratch(True)
         v.set_name("TERMINAL")
@@ -294,7 +302,8 @@ class SublimeView(object):
             l = lines[idx]
             p = v.text_point(idx, 0)
             v.insert(ed, p, l + "\n")
-        self._set_cursor(cursor)
+        if cursor:
+            self._set_cursor(cursor)
         v.end_edit(ed)
 
     def diff_refresh(self, lines_dict, cursor=None):
@@ -305,5 +314,6 @@ class SublimeView(object):
             p = v.text_point(lineno, 0)
             line_region = v.line(p)
             v.replace(ed, line_region, text)
-        self._set_cursor(cursor)
+        if cursor:
+            self._set_cursor(cursor)
         v.end_edit(ed)
