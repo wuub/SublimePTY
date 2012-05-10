@@ -27,26 +27,29 @@ class ConsoleServer(object):
     def terminate_process(self):
         return win32process.TerminateProcess(self._handle, 0)
 
-    def write_console_input(self, keys):
-        codes = [self._input_record(key) for key in keys]
+    def write_console_input(self, codes):
         self._con_in.WriteConsoleInput(codes)
 
-    def _input_record(self, key):
-        kc = win32console.PyINPUT_RECORDType (win32console.KEY_EVENT)
-        kc.KeyDown = True
-        kc.RepeatCount = 1
-        cnum = ord(key)
-        kc.Char = unicode(key)
-        return kc
+    def _input_record(self, key ,**kwds):
+        from win32_keymap import make_input_key
+        return make_input_key(key, **kwds)
+        # kc = win32console.PyINPUT_RECORDType(win32console.KEY_EVENT)
+        # kc.KeyDown = True
+        # kc.RepeatCount = 1
+        # cnum = ord(key)
+        # kc.Char = unicode(key)
+        # return kc
 
     def send_keypress(self, key, **kwds):
-        self.write_console_input(key)
+        self.write_console_input([self._input_record(key, **kwds)])
 
     def read(self):
         lines = {}
         size = self._con_out.GetConsoleScreenBufferInfo()['Window']
-        for i in xrange(0, size.Bottom):
-            lines[i] = self._con_out.ReadConsoleOutputCharacter(size.Right+1, Coord(0, i))
+        idx = 0
+        for i in range(size.Top, size.Bottom + 1):
+            lines[idx] = self._con_out.ReadConsoleOutputCharacter(size.Right+1 - size.Left, Coord(size.Left, i))
+            idx += 1
         diff_lines = {}
         last_keys = self._last_lines.keys()
         for k,v in lines.items():
