@@ -210,11 +210,15 @@ class PtyProcess(Process):
 
 class Win32Process(Process):
     KEYMAP = keymap.WIN32
+    SIZE_REFRESH_EACH = 100 # reads
 
     def start(self):
         from console.console_client import ConsoleClient
         self._cc = ConsoleClient("localhost", 8828)
         self._lines = {}
+        self._reads = 1
+        self._width = 0
+        self._height = 0
 
     def stop(self):
         pass
@@ -235,6 +239,19 @@ class Win32Process(Process):
             lines[int(k)] = v
         for v in self._views:
             v.diff_refresh(lines)
+
+        self._reads = (self._reads + 1) % self.SIZE_REFRESH_EACH
+        if not self._reads:
+            self._size_refresh()
+
+    def _size_refresh(self):
+        height = self.available_lines()
+        width = self.available_columns()
+        if self._width == width and self._height == height:
+            return 
+        self._width = width
+        self._height = height
+        self._cc.set_window_size(width, height)
 
 
 class SublimeView(object):
