@@ -8,7 +8,7 @@ KEYMAP = {
     "down": win32con.VK_DOWN,
     "left": win32con.VK_LEFT,
     "right": win32con.VK_RIGHT,
-    "backspace": win32con.VK_BACKSPACE,
+    "backspace": win32con.VK_BACK,
     "delete": win32con.VK_DELETE,
     "end": win32con.VK_END,
     "home": win32con.VK_HOME,
