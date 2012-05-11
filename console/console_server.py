@@ -56,17 +56,28 @@ class ConsoleServer(object):
         self.write_console_input([self._input_record(key, **kwds)])
 
 
-    def send_click(self, row, col, button=1, **kwds):
+    def send_click(self, row, col, button=1, count=1):
+        inputs = []
+
         mc = win32console.PyINPUT_RECORDType(win32console.MOUSE_EVENT)
         mc.MousePosition = Coord(col, row)
         mc.ButtonState = button #FROM_LEFT_1ST_BUTTON_PRESSED 
+        inputs.append(mc)
 
-        mc2 = win32console.PyINPUT_RECORDType(win32console.MOUSE_EVENT)
-        mc2.MousePosition = Coord(col, row)
-        mc2.ButtonState = 0 #release
+        if count == 2:
+            mc2 = win32console.PyINPUT_RECORDType(win32console.MOUSE_EVENT)
+            mc2.MousePosition = Coord(col, row)
+            mc2.ButtonState = button
+            mc2.EventFlags = 2 #double click            
+            inputs.append(mc2)
 
-        self.write_console_input([mc])
-        self.write_console_input([mc2])
+        mc3 = win32console.PyINPUT_RECORDType(win32console.MOUSE_EVENT)
+        mc3.MousePosition = Coord(col, row)
+        mc3.ButtonState = 0 #release
+        inputs.append(mc3)
+
+        self.write_console_input(inputs)
+        
 
     def read(self):
         lines = {}

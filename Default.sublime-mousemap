@@ -7,9 +7,23 @@
 	},
 
 	{
+		"button": "button1", "count": 2, "modifiers": ["alt", "ctrl"],
+		"press_command": "drag_select",
+		"command": "sublimepty_click",
+		"args": {"button": 1, "count": 2}
+	},
+
+	{
 		"button": "button2", "count": 1, "modifiers": ["alt", "ctrl"],
 		"press_command": "drag_select",
 		"command": "sublimepty_click",
 		"args": {"button": 2, "count": 1}
+	},
+
+	{
+		"button": "button2", "count": 2, "modifiers": ["alt", "ctrl"],
+		"press_command": "drag_select",
+		"command": "sublimepty_click",
+		"args": {"button": 2, "count": 2}
 	}
 ]
