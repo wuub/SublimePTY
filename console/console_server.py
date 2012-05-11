@@ -55,6 +55,19 @@ class ConsoleServer(object):
     def send_keypress(self, key, **kwds):
         self.write_console_input([self._input_record(key, **kwds)])
 
+
+    def send_click(self, row, col, button=1, **kwds):
+        mc = win32console.PyINPUT_RECORDType(win32console.MOUSE_EVENT)
+        mc.MousePosition = Coord(col, row)
+        mc.ButtonState = button #FROM_LEFT_1ST_BUTTON_PRESSED 
+
+        mc2 = win32console.PyINPUT_RECORDType(win32console.MOUSE_EVENT)
+        mc2.MousePosition = Coord(col, row)
+        mc2.ButtonState = 0 #release
+
+        self.write_console_input([mc])
+        self.write_console_input([mc2])
+
     def read(self):
         lines = {}
         size = self._con_out.GetConsoleScreenBufferInfo()['Window']

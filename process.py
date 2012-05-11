@@ -94,6 +94,9 @@ class Process(object):
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
         raise NotImplemented
 
+    def send_click(self, row, col, **kwds):
+        raise NotImplemented
+
     def read(self):
         raise NotImplemented
 
@@ -232,6 +235,11 @@ class Win32Process(Process):
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
         self._cc.send_keypress(key, ctrl=ctrl, alt=alt, shift=shift, super=super)
         self.read()
+
+    def send_click(self, row, col, **kwds):
+        self._cc.send_click(row, col, **kwds)
+        self.read()
+
 
     def read(self):
         lines = {}
