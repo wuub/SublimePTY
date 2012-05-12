@@ -33,7 +33,6 @@ class ConsoleServer(object):
 
 
     def set_window_size(self, width, height):
-        max_size = self._con_out.GetConsoleScreenBufferInfo()['MaximumWindowSize']
         window_size = SmallRect()
         window_size.Right = width - 1
         window_size.Bottom = height - 1
@@ -81,7 +80,8 @@ class ConsoleServer(object):
 
     def read(self, full=False):
         lines = {}
-        size = self._con_out.GetConsoleScreenBufferInfo()['Window']
+        buf_info = self._con_out.GetConsoleScreenBufferInfo()
+        size = buf_info['Window']
         idx = 0
         for i in range(size.Top, size.Bottom + 1):
             lines[idx] = self._con_out.ReadConsoleOutputCharacter(size.Right+1 - size.Left, Coord(size.Left, i))
@@ -93,9 +93,12 @@ class ConsoleServer(object):
                 continue
             diff_lines[k] = v
         self._last_lines = lines
+
+        cursos_position = buf_info['CursorPosition']
+        pos = (cursos_position.X, cursos_position.Y)
         if full:
-            return lines
-        return diff_lines
+            return lines, pos
+        return diff_lines, pos
 
 
 class ConsoleProtocol(LineReceiver):

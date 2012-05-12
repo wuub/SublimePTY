@@ -8,8 +8,9 @@ import pyte
 import keymap
 import os
 import sys
+from collections import namedtuple
 
-
+Coord = namedtuple("Coord", ["x", "y"])
 
 try:
     import tty
@@ -245,14 +246,16 @@ class Win32Process(Process):
             self._size_refresh()
             full = True
 
+        (_lines, _cursor_pos) = self._cc.read(full)
+        cursor_pos = Coord(*_cursor_pos) # we need .x .y access
         lines = {}
-        for k,v in self._cc.read(full).items():
+        for k,v in _lines.items():
             lines[int(k)] = v
         for v in self._views:
             if full:
-                v.full_refresh(lines)
+                v.full_refresh(lines, cursor_pos)
             else:
-                v.diff_refresh(lines)
+                v.diff_refresh(lines, cursor_pos)
 
     def _size_refresh(self):
         height = self.available_lines()
