@@ -1,5 +1,7 @@
 import json
 import telnetlib
+import socket
+import zlib
 
 
 class RemoteError(Exception):
@@ -18,15 +20,20 @@ class ConsoleClient(object):
     def __init__(self, host, port): 
         self._telnet = telnetlib.Telnet()
         self._telnet.open(host, int(port))
+        self.is_running = True 
 
     def _request(self, cmd, *args, **kwds):
-        req = json.dumps({"command": cmd, "args": args, "kwds": kwds})
-        self._telnet.write(req)
-        self._telnet.write("\r\n")
-        resp = json.loads(self._telnet.read_until("\r\n"))
-        if resp["status"] != "ok":
-            raise RemoteError(resp)
-        return resp["result"]
+        try:
+            req = json.dumps({"command": cmd, "args": args, "kwds": kwds})
+            self._telnet.write(req)
+            self._telnet.write("\r\n")
+            resp = json.loads(self._telnet.read_until("\r\n"))
+            if resp["status"] != "ok":
+                raise RemoteError(resp)
+            return resp["result"]
+        except socket.error:
+            self.is_running = Fale
+            return None
 
     def __getattr__(self, name):
         """Automatically return procedure used to invokek remote methods"""

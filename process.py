@@ -39,6 +39,8 @@ class Supervisor(object):
 class Process(object):
     DEFAULT_COLUMNS = 80
     DEFAULT_LINES   = 24
+    MIN_COLUMNS     = 10
+    MIN_LINES       = 2 
 
     def __init__(self, supervisor):
         from uuid import uuid4
@@ -68,16 +70,12 @@ class Process(object):
         return self._lines
 
     def available_columns(self):
-        ac = self.DEFAULT_COLUMNS
-        for v in self._views:
-            ac = min(ac, v.available_columns())
-        return ac
+        ac = min((v.available_columns() for v in self._views))
+        return max(ac, self.MIN_COLUMNS)
 
     def available_lines(self):
-        al = self.DEFAULT_LINES
-        for v in self._views:
-            al = min(al, v.available_lines())
-        return al
+        al = min((v.available_lines() for v in self._views))
+        return max(al, self.MIN_LINES)
 
     def start(self):
         raise NotImplemented
@@ -213,7 +211,7 @@ class PtyProcess(Process):
 
 class Win32Process(Process):
     KEYMAP = keymap.WIN32
-    SIZE_REFRESH_EACH = 100 # reads
+    SIZE_REFRESH_EACH = 20 # reads
 
     def start(self):
         from console.console_client import ConsoleClient
@@ -227,7 +225,7 @@ class Win32Process(Process):
         pass
 
     def is_running(self):
-        return True 
+        return self.__cc.is_running
 
     def send_bytes(self, bytes):
         self._cc.write_console_input(bytes)
@@ -240,17 +238,21 @@ class Win32Process(Process):
         self._cc.send_click(row, col, **kwds)
         self.read()
 
-
     def read(self):
-        lines = {}
-        for k,v in self._cc.read().items():
-            lines[int(k)] = v
-        for v in self._views:
-            v.diff_refresh(lines)
-
+        full = False
         self._reads = (self._reads + 1) % self.SIZE_REFRESH_EACH
         if not self._reads:
             self._size_refresh()
+            full = True
+
+        lines = {}
+        for k,v in self._cc.read(full).items():
+            lines[int(k)] = v
+        for v in self._views:
+            if full:
+                v.full_refresh(lines)
+            else:
+                v.diff_refresh(lines)
 
     def _size_refresh(self):
         height = self.available_lines()
@@ -303,11 +305,11 @@ class SublimeView(object):
 
     def available_columns(self):
         (w, h) = self._view.viewport_extent()
-        return w // self._view.em_width()
+        return int(w // self._view.em_width())
 
     def available_lines(self):
         (w, h) = self._view.viewport_extent()
-        return h // self._view.line_height()
+        return int(h // self._view.line_height())
 
     def _set_cursor(self, cursor):
         import sublime

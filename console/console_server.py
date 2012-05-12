@@ -24,23 +24,23 @@ class ConsoleServer(object):
         self._con_out = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
         self._con_in = win32console.GetStdHandle(win32console.STD_INPUT_HANDLE)
 
-        self._con_out.SetConsoleScreenBufferSize(Coord(BUFFER_WIDTH, BUFFER_HEIGHT))
-
         flags = win32process.NORMAL_PRIORITY_CLASS
         si = win32process.STARTUPINFO()
         si.dwFlags |= win32con.STARTF_USESHOWWINDOW
         (self._handle, handle2, i1, i2) = win32process.CreateProcess(None, "cmd.exe", None, None, 0, flags, None, '.', si)
+        time.sleep(0.2) # wait for process
+        self.set_screen_buffer_size(BUFFER_WIDTH, BUFFER_HEIGHT)
 
 
     def set_window_size(self, width, height):
         max_size = self._con_out.GetConsoleScreenBufferInfo()['MaximumWindowSize']
-        required_width = min(max_size.X, width)
-        required_height = min(max_size.Y, height)
-
         window_size = SmallRect()
-        window_size.Right = required_width - 1
-        window_size.Bottom = required_height - 1
+        window_size.Right = width - 1
+        window_size.Bottom = height - 1
         self._con_out.SetConsoleWindowInfo(True, window_size)
+
+    def set_screen_buffer_size(self, width, height):
+        self._con_out.SetConsoleScreenBufferSize(Coord(width, height))
 
     def terminate_process(self):
         return win32process.TerminateProcess(self._handle, 0)
@@ -79,7 +79,7 @@ class ConsoleServer(object):
         self.write_console_input(inputs)
         
 
-    def read(self):
+    def read(self, full=False):
         lines = {}
         size = self._con_out.GetConsoleScreenBufferInfo()['Window']
         idx = 0
@@ -93,6 +93,8 @@ class ConsoleServer(object):
                 continue
             diff_lines[k] = v
         self._last_lines = lines
+        if full:
+            return lines
         return diff_lines
 
 
@@ -103,6 +105,7 @@ class ConsoleProtocol(LineReceiver):
 
     def connectionLost(self, reason):
         print("Connection lost:", reason)
+        self._console.terminate_process()
 
     def lineReceived(self, line):
         import json
