@@ -1,7 +1,3 @@
-from twisted.internet.protocol import Factory
-from twisted.protocols.basic import LineReceiver
-from twisted.internet import reactor
-
 import win32api
 import win32pipe
 import win32console
@@ -143,36 +139,38 @@ class ConsoleServer(object):
             return lines, pos, colors
         return diff_lines, pos, diff_colors
 
-class ConsoleProtocol(LineReceiver):
 
+import socket
+
+UDP_IP="127.0.0.1"
+RECV_UDP_PORT=8828
+SEND_UDP_PORT=8829
+
+class UdpConsole(object):
     def __init__(self):
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._sock.bind((UDP_IP, RECV_UDP_PORT))
         self._console = ConsoleServer()
 
-    def connectionLost(self, reason):
-        print("Connection lost:", reason)
-        self._console.terminate_process()
+    def run(self):
+        while True:
+            import json, zlib
+            msg = self._sock.recv(2**14)
+            response = {"status": "error"}
+            try:
+                cmd = json.loads(zlib.decompress(msg))
+                response["result"] = self.handle_command(cmd)
+                response["status"] = "ok"
+            except Exception, e:
+                response["status"] = "error"
+                response["description"] = unicode(e)
+            self._sock.sendto(zlib.compress(json.dumps(response)), (UDP_IP, SEND_UDP_PORT))
 
-    def lineReceived(self, line):
-        import json
-        response = {"status": "error"}
-        try:
-            cmd = json.loads(line)
-            response["result"] = self.handleCommand(cmd)
-            response["status"] = "ok"
-        except Exception, e:
-            response["status"] = "error"
-            response["description"] = unicode(e)
-        self.sendLine(json.dumps(response))
-
-    def handleCommand(self, cmd):
+    def handle_command(self, cmd):
         method = getattr(self._console, cmd["command"])
         return method(*cmd["args"], **cmd["kwds"])
 
-class ConsoleProtocolFactory(Factory):
-    def buildProtocol(self, addr):
-        return ConsoleProtocol()
-
 
 if __name__ == "__main__":
-    reactor.listenTCP(8828, ConsoleProtocolFactory())
-    reactor.run()
+    con = UdpConsole()
+    con.run()

@@ -1,5 +1,4 @@
 import json
-import telnetlib
 import socket
 import zlib
 
@@ -15,19 +14,23 @@ class RemoteError(Exception):
     def __str__(self):
         return str(self._resp)
 
+UDP_IP="127.0.0.1"
+RECV_UDP_PORT=8828
+SEND_UDP_PORT=8829
+
 class ConsoleClient(object):
 
     def __init__(self, host, port): 
-        self._telnet = telnetlib.Telnet()
-        self._telnet.open(host, int(port))
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._sock.bind((UDP_IP, SEND_UDP_PORT))
         self.is_running = True 
 
     def _request(self, cmd, *args, **kwds):
         try:
-            req = json.dumps({"command": cmd, "args": args, "kwds": kwds})
-            self._telnet.write(req)
-            self._telnet.write("\r\n")
-            resp = json.loads(self._telnet.read_until("\r\n"))
+            req = zlib.compress(json.dumps({"command": cmd, "args": args, "kwds": kwds}))
+            self._sock.sendto(req, (UDP_IP, RECV_UDP_PORT))
+            res = self._sock.recv(2**15)
+            resp = json.loads(zlib.decompress(res))
             if resp["status"] != "ok":
                 raise RemoteError(resp)
             return resp["result"]
