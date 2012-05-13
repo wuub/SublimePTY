@@ -30,10 +30,26 @@ KEYMAP = {
     "escape": win32con.VK_ESCAPE
     }
 
+CONTROL_KEY_STATE_FLAGS = {
+    "ctrl": win32con.LEFT_CTRL_PRESSED,
+    "shift": win32con.SHIFT_PRESSED,
+    "alt": win32con.LEFT_ALT_PRESSED,
+    "super": 0
+}
+
+def flag_value(flags_dict, **kwds):
+    """ compute flag value for dictionary with true/false values"""
+    flag = 0
+    for k,v in kwds.items():
+        if v:
+            flag |= flags_dict[str(k)]
+    return flag
+
 def make_input_key(key, **kwds):
     kc = win32console.PyINPUT_RECORDType(win32console.KEY_EVENT)
     kc.KeyDown = True
     kc.RepeatCount = 1
+    kc.ControlKeyState = flag_value(CONTROL_KEY_STATE_FLAGS, **kwds)
 
     if key in KEYMAP:    
         kc.Char = unicode(chr(KEYMAP[key]))
