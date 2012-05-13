@@ -14,8 +14,8 @@ import win32job
 Coord = win32console.PyCOORDType
 SmallRect = win32console.PySMALL_RECTType
 
-BUFFER_WIDTH = 160
-BUFFER_HEIGHT = 100
+MAX_BUFFER_WIDTH = 160
+MAX_BUFFER_HEIGHT = 100
 
 PYTHON_PID = win32process.GetCurrentProcessId()
 
@@ -33,6 +33,8 @@ class ConsoleServer(object):
 
     def __init__(self):
         self._last_lines = {}
+        self._last_colors = {}
+
         win32console.FreeConsole()
         win32console.AllocConsole()
         #self._job = win32job.CreateJobObject(None, str(time.time())) 
@@ -53,9 +55,12 @@ class ConsoleServer(object):
         self._con_out.SetConsoleWindowInfo(True, window_size)
         time.sleep(0.1)
 
-        window_size.Right = width - 1
-        window_size.Bottom = height - 1
-        self.set_screen_buffer_size(width, height)
+        req_width = min(MAX_BUFFER_WIDTH, width)
+        req_height = min(MAX_BUFFER_HEIGHT, height)
+        window_size = SmallRect()
+        window_size.Right = req_width - 1
+        window_size.Bottom = req_height - 1
+        self.set_screen_buffer_size(req_width, req_height)
         time.sleep(0.1)
 
         self._con_out.SetConsoleWindowInfo(True, window_size)
@@ -107,28 +112,36 @@ class ConsoleServer(object):
         self.write_console_input(inputs)
         
 
-    def read(self, full=False):
+    def read(self, full=False, with_colors=False):
         lines = {}
+        colors = {}
         buf_info = self._con_out.GetConsoleScreenBufferInfo()
         size = buf_info['Window']
         idx = 0
         for i in range(size.Top, size.Bottom + 1):
             lines[idx] = self._con_out.ReadConsoleOutputCharacter(size.Right+1 - size.Left, Coord(size.Left, i))
+            if with_colors:
+                colors[idx] = self._con_out.ReadConsoleOutputAttribute(size.Right+1 - size.Left, Coord(size.Left, i))
             idx += 1
         diff_lines = {}
-        last_keys = self._last_lines.keys()
-        for k,v in lines.items():
-            if k in last_keys and self._last_lines[k] == v:
+        diff_colors = {}
+        last_lines_keys = self._last_lines.keys()
+        last_colors_keys = self._last_colors.keys()
+        for k, v in lines.items():
+            if k in last_colors_keys and self._last_colors[k] != colors[k]:
+                diff_colors[k] = colors[k]
+            if k in last_lines_keys and self._last_lines[k] == v:
                 continue
             diff_lines[k] = v
+            diff_colors[k] = colors[k] # if line is changed, then colors need to be reaplied 
         self._last_lines = lines
+        self._last_colors = colors
 
         cursos_position = buf_info['CursorPosition']
         pos = (cursos_position.X, cursos_position.Y)
         if full:
-            return lines, pos
-        return diff_lines, pos
-
+            return lines, pos, colors
+        return diff_lines, pos, diff_colors
 
 class ConsoleProtocol(LineReceiver):
 
