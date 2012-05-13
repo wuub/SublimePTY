@@ -32,7 +32,7 @@ class ConsoleClient(object):
                 raise RemoteError(resp)
             return resp["result"]
         except socket.error:
-            self.is_running = Fale
+            self.is_running = False
             return None
 
     def __getattr__(self, name):

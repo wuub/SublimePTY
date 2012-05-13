@@ -14,6 +14,9 @@ SmallRect = win32console.PySMALL_RECTType
 BUFFER_WIDTH = 160
 BUFFER_HEIGHT = 100
 
+
+
+
 class ConsoleServer(object):
 
     def __init__(self):
@@ -47,7 +50,7 @@ class ConsoleServer(object):
     def write_console_input(self, codes):
         self._con_in.WriteConsoleInput(codes)
 
-    def _input_record(self, key ,**kwds):
+    def _input_record(self, key, **kwds):
         from win32_keymap import make_input_key
         return make_input_key(key, **kwds)
 
