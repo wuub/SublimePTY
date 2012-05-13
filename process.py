@@ -221,6 +221,7 @@ class Win32Process(Process):
         self._reads = 1
         self._width = 0
         self._height = 0
+        self._last_cursor_pos = None
 
     def stop(self):
         pass
@@ -232,7 +233,10 @@ class Win32Process(Process):
         self._cc.write_console_input(bytes)
 
     def send_keypress(self, key, ctrl=False, alt=False, shift=False, super=False):
-        self._cc.send_keypress(key, ctrl=ctrl, alt=alt, shift=shift, super=super)
+        if (ctrl and not (alt or shift or super) and key=='c'):
+            self._cc.send_ctrl_c()
+        else:
+            self._cc.send_keypress(key, ctrl=ctrl, alt=alt, shift=shift, super=super)
         self.read()
 
     def send_click(self, row, col, **kwds):
@@ -248,6 +252,11 @@ class Win32Process(Process):
 
         (_lines, _cursor_pos) = self._cc.read(full)
         cursor_pos = Coord(*_cursor_pos) # we need .x .y access
+        if not full and self._last_cursor_pos == cursor_pos:
+            cursor_pos = None
+        else:
+            self._last_cursor_pos = cursor_pos
+            
         lines = {}
         for k,v in _lines.items():
             lines[int(k)] = v

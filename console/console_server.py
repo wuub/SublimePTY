@@ -2,11 +2,14 @@ from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 
+import win32api
 import win32pipe
 import win32console
 import win32process
 import win32con
 import time
+import win32event
+import win32job
 
 Coord = win32console.PyCOORDType
 SmallRect = win32console.PySMALL_RECTType
@@ -14,37 +17,54 @@ SmallRect = win32console.PySMALL_RECTType
 BUFFER_WIDTH = 160
 BUFFER_HEIGHT = 100
 
+PYTHON_PID = win32process.GetCurrentProcessId()
 
+# import signal
+# import sys
+# def signal_handler(signal, handler):
+#     print("Signal")
+# signal.signal(signal.SIGINT, signal_handler)
+# def win32error(error):
+#     print("WIn32", error)
+#     return False
 
 
 class ConsoleServer(object):
 
     def __init__(self):
         self._last_lines = {}
-
         win32console.FreeConsole()
         win32console.AllocConsole()
-        self._con_out = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
-        self._con_in = win32console.GetStdHandle(win32console.STD_INPUT_HANDLE)
-
-        flags = win32process.NORMAL_PRIORITY_CLASS
+        #self._job = win32job.CreateJobObject(None, str(time.time())) 
+        flags = win32process.CREATE_SUSPENDED | win32process.NORMAL_PRIORITY_CLASS | win32process.CREATE_NEW_PROCESS_GROUP | win32process.CREATE_UNICODE_ENVIRONMENT 
         si = win32process.STARTUPINFO()
         si.dwFlags |= win32con.STARTF_USESHOWWINDOW
-        (self._handle, handle2, i1, i2) = win32process.CreateProcess(None, "cmd.exe", None, None, 0, flags, None, '.', si)
-        time.sleep(0.2) # wait for process
-        self.set_screen_buffer_size(BUFFER_WIDTH, BUFFER_HEIGHT)
-
+        (self._handle, self._thandle, self._pid, i2) = win32process.CreateProcess(None, "cmd.exe", None, None, 0, flags, None, '.', si)
+        time.sleep(0.2)
+        self._con_out = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
+        self._con_in = win32console.GetStdHandle(win32console.STD_INPUT_HANDLE)
+        #win32job.AssignProcessToJobObject(self._job, self._handle)
+        win32process.ResumeThread(self._thandle)
 
     def set_window_size(self, width, height):
         window_size = SmallRect()
+        window_size.Right = 1
+        window_size.Bottom = 1
+        self._con_out.SetConsoleWindowInfo(True, window_size)
+        time.sleep(0.1)
+
         window_size.Right = width - 1
         window_size.Bottom = height - 1
+        self.set_screen_buffer_size(width, height)
+        time.sleep(0.1)
+
         self._con_out.SetConsoleWindowInfo(True, window_size)
 
     def set_screen_buffer_size(self, width, height):
         self._con_out.SetConsoleScreenBufferSize(Coord(width, height))
 
     def terminate_process(self):
+        #return win32job.TerminateJobObject(self.job, 1) 
         return win32process.TerminateProcess(self._handle, 0)
 
     def write_console_input(self, codes):
@@ -57,6 +77,12 @@ class ConsoleServer(object):
     def send_keypress(self, key, **kwds):
         self.write_console_input([self._input_record(key, **kwds)])
 
+    def send_ctrl_c(self):
+        # ctrl_break for now, it seems I am unable to control
+        # ctrl_c correctly, it either does nopthing or kills 
+        # controling python process as well
+        #win32console.GenerateConsoleCtrlEvent(win32console.CTRL_C_EVENT, self._pid)
+        win32console.GenerateConsoleCtrlEvent(win32console.CTRL_BREAK_EVENT, self._pid)
 
     def send_click(self, row, col, button=1, count=1):
         inputs = []
