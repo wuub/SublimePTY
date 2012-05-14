@@ -263,7 +263,7 @@ class Win32Process(Process):
         pass
 
     def is_running(self):
-        return self.__cc.is_running
+        return self._cc.is_running
 
     def send_bytes(self, bytes):
         self._cc.write_console_input(bytes)
