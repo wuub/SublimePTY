@@ -250,14 +250,18 @@ class Win32Process(Process):
     KEYMAP = keymap.WIN32
     SIZE_REFRESH_EACH = 50 # reads
 
-    def start(self):
-        from console.console_client import ConsoleClient
-        self._cc = ConsoleClient("localhost", 8828)
+    def __init__(self, *args, **kwds):
         self._lines = {}
         self._reads = 1
         self._width = 0
         self._height = 0
         self._last_cursor_pos = None
+        self._cc = None
+        super(Win32Process, self).__init__(*args, **kwds)
+
+    def start(self):
+        from console.console_client import ConsoleClient
+        self._cc = ConsoleClient("localhost", 8828)
 
     def stop(self):
         pass
@@ -280,6 +284,8 @@ class Win32Process(Process):
         self.read()
 
     def read(self):
+        if not self._cc:
+            return # dead or not started yet
         full = False
         with_colors = True
         self._reads = (self._reads + 1) % self.SIZE_REFRESH_EACH
