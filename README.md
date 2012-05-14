@@ -15,8 +15,10 @@ First of all remember this is actually a PRE-ALPHA. It means, SublimePTY at this
 
 ## What platforms are supported? ##
 
-Supported? None ;) Alpha should start on Linux and OSX. 
-Windows is out for now.
+Supported? None ;) 
+Development is done separately on Linux/OSX and Windows versions. 
+Alpha "works" on Linux and OSX for some time now. 
+Recently, Windows verion is in very active development and should be released as beta first (10:12  14 May 2012).
 
 ## Documentation? ##
 
@@ -36,7 +38,8 @@ You are free to test this software for as long as beta or final version is not a
 Once beta or final version is released you MUST upgrade and agree to the chosen license or 
 uninstall this software.
 
-Also:  `THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+Also:  
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -46,4 +49,4 @@ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
 INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.`
+POSSIBILITY OF SUCH DAMAGE.
