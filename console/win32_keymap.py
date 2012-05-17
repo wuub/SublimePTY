@@ -1,6 +1,7 @@
 import win32con
 import win32console
 import ctypes
+import winkbd
 
 KEYMAP = {
     "enter": win32con.VK_RETURN,
@@ -51,12 +52,17 @@ def make_input_key(key, **kwds):
     kc.RepeatCount = 1
     kc.ControlKeyState = flag_value(CONTROL_KEY_STATE_FLAGS, **kwds)
 
-    if key in KEYMAP:    
+    if key in KEYMAP:
         kc.Char = unicode(chr(KEYMAP[key]))
         kc.VirtualKeyCode = KEYMAP[key]
     elif len(key) == 1:
-        kc.Char = unicode(key)
-        kc.VirtualKeyCode = ctypes.windll.user32.VkKeyScanA(ord(key))
+        actual_char = winkbd.kb_to_unicode(key, **kwds)
+        virtual_key_code, kb_states = winkbd.unichar_to_virtual_key(unicode(actual_char))
+        actual_states = flag_value(CONTROL_KEY_STATE_FLAGS, **kb_states)
+
+        kc.Char = unicode(actual_char)
+        kc.VirtualKeyCode = virtual_key_code
+        kc.ControlKeyState = actual_states
     else:
         raise RuntimeError("no such key %s"% (key,))
     return kc
