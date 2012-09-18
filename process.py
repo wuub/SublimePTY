@@ -109,7 +109,7 @@ class PtyProcess(Process):
     DEFAULT_LOCALE = 'en_US.UTF8'
     KEYMAP = keymap.ANSI
 
-    def __init__(self, supervisor, cmd=None, env=None, cwd=None):
+    def __init__(self, supervisor, cmd=None, env=None, cwd=None, encodings=None):
         super(PtyProcess, self).__init__(supervisor)
         self._cmd = cmd or [os.environ.get("SHELL")]
         self._env = env or os.environ
@@ -120,7 +120,7 @@ class PtyProcess(Process):
         self._master = None
         self._slave = None
         
-        self._stream = pyte.ByteStream()
+        self._stream = pyte.ByteStream(encodings)
         self._dbg_steram = None #pyte.DebugStream()
         self._screens = {'diff': pyte.DiffScreen(self.DEFAULT_COLUMNS, self.DEFAULT_LINES)}
         for screen in self._screens.values():
@@ -357,6 +357,10 @@ class SublimeView(object):
     @property
     def process(self):
         return self._process
+
+    @property
+    def view(self):
+        return self._view
 
     @process.setter
     def process(self, new_process):
