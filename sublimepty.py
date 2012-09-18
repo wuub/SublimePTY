@@ -16,11 +16,12 @@ def process(id):
     return SUPERVISOR.process(id)
 
 class OpenPty(sublime_plugin.WindowCommand):
-    def run(self):
+    def run(self, shell=None, encodings=None, title="TERMINAL"):
         sv = SublimeView()
+        sv.view.set_name(title);
         if ON_WINDOWS:
             proc = Win32Process(SUPERVISOR)
         else:
-            proc = PtyProcess(SUPERVISOR)
+            proc = PtyProcess(SUPERVISOR, cmd = shell, encodings = encodings)
         proc.attach_view(sv)
         proc.start()
