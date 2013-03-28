@@ -1,7 +1,14 @@
+NOTE: **2013-03-28** this has not been touched in a while and will probably not work as expected. I plan to revive this 
+project in the near future and check if changes introduced in ST3 will allow this to continue. 
+
 # SublimePTY - PRE-Alpha release #
+
+
 ![Alpha on Windows](http://i.imgur.com/eSPaO.png)
 
 [Short Youtube screencast](http://www.youtube.com/watch?v=eaGBVdlqTko) 
+
+
 
 
 ## I want to test this? ##
@@ -28,7 +35,7 @@ Buahahahahaha... :-)
 
 Help with the development: during pre-alpha tell me what programs refuse to start under SublimePTY, once alpha is released send bug reports, test things, maybe try doing development on windows if you're feeling adventurous. 
 
-If you're busy and/or for some other reason unable to contribute, then [you can buy me a beer, or two](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=paypal%40wuub%2enet&lc=US&item_name=SublimePTY&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHosted).  I noticed that feature requests sent with a beer get much higher priority, it's a mystery I know ;-)
+If you're busy and/or for some other reason unable to contribute, then [you can buy me a beer, or two (see note at the top before donatind)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=paypal%40wuub%2enet&lc=US&item_name=SublimePTY&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHosted).  I noticed that feature requests sent with a beer get much higher priority, it's a mystery I know ;-)
 
 ## License ##
 
